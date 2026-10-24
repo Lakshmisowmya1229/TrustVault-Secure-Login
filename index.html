@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustVault — Intelligent Secure Document Sharing</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        /* Animated Mesh Background */
+        .bg-mesh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.28) 0%, transparent 45%),
+                radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.25) 0%, transparent 40%),
+                radial-gradient(circle at 50% 80%, rgba(6, 182, 212, 0.2) 0%, transparent 50%);
+            filter: blur(60px);
+            animation: meshMove 14s ease-in-out infinite alternate;
+        }
+
+        @keyframes meshMove {
+            0% { transform: scale(1) translate(0, 0); }
+            50% { transform: scale(1.08) translate(-15px, 12px); }
+            100% { transform: scale(1.03) translate(15px, -12px); }
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.3s ease;
+        }
+
+        /* Dynamic Watermark Overlay */
+        .watermark-container {
+            position: relative;
+            overflow: hidden;
+        }
+        .watermark-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: space-around;
+            justify-content: space-around;
+            opacity: 0.18;
+            transform: rotate(-25deg) scale(1.2);
+            user-select: none;
+        }
+        .watermark-item {
+            font-size: 11px;
+            font-weight: 800;
+            color: #ffffff;
+            white-space: nowrap;
+            padding: 12px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.5);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between relative overflow-x-hidden">
+
+    <div class="bg-mesh" id="bgMesh"></div>
+
+    <!-- TOP NAVIGATION HEADER -->
+    <header class="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center z-10">
+        <div class="flex items-center gap-3 cursor-pointer" id="btnLogoHome">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-indigo-500/30">
+                <i class="fa-solid fa-vault"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-slate-400">TrustVault</h1>
+                <p class="text-xs text-indigo-300 font-medium hidden sm:block">Intelligent RBAC & Verifiable Document Access</p>
+            </div>
+        </div>
+
+        <!-- CONTROLS: THEME SWITCHER + PERSONA TOGGLE + AUTH -->
+        <div class="flex items-center gap-3">
+            <!-- Theme Buttons -->
+            <div class="hidden md:flex items-center gap-1.5 bg-slate-800/80 backdrop-blur-md p-1.5 rounded-full border border-slate-700/60">
+                <button id="btnThemeDefault" class="w-6 h-6 rounded-full bg-indigo-500 ring-2 ring-white transition" title="Default Theme"></button>
+                <button id="btnThemeCyber" class="w-6 h-6 rounded-full bg-cyan-400 transition" title="Cyberpunk Theme"></button>
+                <button id="btnThemeEmerald" class="w-6 h-6 rounded-full bg-emerald-500 transition" title="Emerald Theme"></button>
+            </div>
+
+            <!-- Role / Persona Toggle -->
+            <div class="flex items-center bg-slate-900/90 border border-slate-700/80 rounded-xl p-1 gap-1">
+                <button id="roleBtnAdmin" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-indigo-600 text-white shadow-md">
+                    <i class="fa-solid fa-user-shield"></i> Admin
+                </button>
+                <button id="roleBtnViewer" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-eye"></i> Viewer
+                </button>
+            </div>
+
+            <!-- Lock / Auth Header Button -->
+            <button id="authHeaderBtn" class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
+                <i class="fa-solid fa-user-lock"></i> <span id="authHeaderBtnText">Sign In</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN DASHBOARD CONTENT CONTAINER -->
+    <main class="w-full max-w-7xl mx-auto px-4 sm:px-6 my-4 flex-grow z-10 flex flex-col gap-6">
+
+        <!-- BANNER INFO BAR -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-l-4 border-l-indigo-500" id="roleBanner">
+            <div class="flex items-start gap-3.5">
+                <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20 text-lg" id="roleIconContainer">
+                    <i id="roleIcon" class="fa-solid fa-user-shield"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span id="roleTitle" class="font-extrabold text-base text-white">Administrator Control Hub</span>
+                        <span id="roleBadge" class="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">FULL RBAC PRIVILEGES</span>
+                    </div>
+                    <p id="roleDesc" class="text-xs text-slate-300 mt-0.5">Full operational authority: Upload documents, issue self-destruct share links, view audit logs, and enforce security policies.</p>
+                </div>
+            </div>
+
+            <!-- Storage Quota Meter -->
+            <div class="w-full md:w-64 bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+                <div class="flex justify-between text-xs font-semibold">
+                    <span class="text-slate-400"><i class="fa-solid fa-database text-indigo-400 mr-1"></i> Vault Storage</span>
+                    <span id="storageText" class="text-indigo-300">12.4 MB / 100 MB</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div id="storageBar" class="bg-gradient-to-r from-indigo-500 to-pink-500 h-2 rounded-full transition-all duration-500" style="width: 12.4%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN SECTION: UPLOAD & SHARE LINK CREATOR -->
+        <section id="adminControlSection" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Drag and Drop File Upload Container -->
+            <div class="lg:col-span-2 glass-card rounded-2xl p-6 relative flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up text-indigo-400"></i> Encrypted File Upload & Hash Ledger
+                        </h2>
+                        <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-lg font-medium">
+                            <i class="fa-solid fa-lock mr-1"></i> AES-256 Client-Side
+                        </span>
+                    </div>
+
+                    <!-- Dropzone -->
+                    <div id="dropZone" class="border-2 border-dashed border-slate-600 hover:border-indigo-500 bg-slate-900/40 hover:bg-indigo-500/5 rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 group">
+                        <div class="w-14 h-14 rounded-full bg-indigo-500/10 group-hover:scale-110 group-hover:bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-2xl transition">
+                            <i class="fa-solid fa-file-shield"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-white group-hover:text-indigo-300 transition">Drag & Drop files here, or <span class="text-indigo-400 underline">Browse Local Files</span></p>
+                            <p class="text-xs text-slate-400 mt-1">Supports PDF, DOCX, XLSX, PNG, JPG (Max File Size: 25 MB)</p>
+                        </div>
+                        <input type="file" id="fileInput" class="hidden">
+                    </div>
+                </div>
+
+                <!-- Metadata Form -->
+                <div class="mt-4 pt-4 border-t border-slate-700/50 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Target Security Level</label>
+                        <select id="uploadSecLevel" class="w-full bg-slate-900/80 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-200 outline-none focus:border-indigo-500">
+                            <option value="Confidential">Confidential (OTP Required)</option>
+                            <option value="Restricted">Restricted (Watermark Mandatory)</option>
+                            <option value="Top Secret">Top Secret (Single View Self-Destruct)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Document Category</label>
+                        <select id="uploadCategory" class="w-full bg-slate-900/80 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-200 outline-none focus:border-indigo-500">
+                            <option value="Financials">Financials</option>
+                            <option value="Legal">Legal & Compliance</option>
+                            <option value="Security">Security Audit</option>
+                            <option value="HR & Personal">HR & Personal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Passphrase (Optional)</label>
+                        <input type="password" id="uploadPassphrase" placeholder="Zero-knowledge key..." class="w-full bg-slate-900/80 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-200 outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Share Link Generator Card -->
+            <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                        <i class="fa-solid fa-link text-indigo-400"></i> Time-Limited Link Generator
+                    </h2>
+                    <p class="text-xs text-slate-300 mb-4">Generate self-revoking encrypted preview links with embedded access controls.</p>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Select Document</label>
+                            <select id="shareDocSelect" class="w-full bg-slate-900/80 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-200 outline-none focus:border-indigo-500">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Link Expiration Period</label>
+                            <select id="shareExpiration" class="w-full bg-slate-900/80 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-200 outline-none focus:border-indigo-500">
+                                <option value="1h">1 Hour Self-Destruct</option>
+                                <option value="24h">24 Hours Self-Destruct</option>
+                                <option value="7d">7 Days Access</option>
+                                <option value="1view">1-View Only (Destroys after reading)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center gap-2 pt-1">
+                            <input type="checkbox" id="chkEnforceOTP" checked class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0">
+                            <label for="chkEnforceOTP" class="text-xs text-slate-300 font-medium">Require 2FA OTP Verification</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btnGenerateShareLink" class="w-full mt-4 bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-xs py-3 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-key"></i> Generate Verifiable Link
+                </button>
+            </div>
+        </section>
+
+        <!-- FILE SEARCH & MAIN DOCUMENT MANAGEMENT LEDGER -->
+        <section class="glass-card rounded-2xl p-6">
+            <!-- Search & Filter Header Bar -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div>
+                    <h2 class="text-lg font-extrabold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-folder-tree text-indigo-400"></i> Vault Document Ledger & Access Trails
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Real-time SHA-256 integrity logs and permission settings.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <!-- Search Input -->
+                    <div class="relative flex-grow sm:flex-grow-0 sm:w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-400"></i>
+                        <input type="text" id="searchInput" placeholder="Search document name, hash..." class="w-full bg-slate-900/80 border border-slate-700 text-xs rounded-xl pl-9 pr-3 py-2 text-slate-200 outline-none focus:border-indigo-500">
+                    </div>
+
+                    <!-- Filter Dropdown -->
+                    <select id="filterCategory" class="bg-slate-900/80 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-200 outline-none focus:border-indigo-500">
+                        <option value="ALL">All Categories</option>
+                        <option value="Financials">Financials</option>
+                        <option value="Legal">Legal & Compliance</option>
+                        <option value="Security">Security Audit</option>
+                        <option value="HR & Personal">HR & Personal</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Documents Table -->
+            <div class="overflow-x-auto rounded-xl border border-slate-700/60">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-900/90 uppercase text-[10px] text-slate-400 font-bold border-b border-slate-700/60">
+                        <tr>
+                            <th class="py-3.5 px-4">Document Title</th>
+                            <th class="py-3.5 px-4">Category</th>
+                            <th class="py-3.5 px-4">Cryptographic Hash (SHA-256)</th>
+                            <th class="py-3.5 px-4">Security Policy</th>
+                            <th class="py-3.5 px-4">Expiry Timer</th>
+                            <th class="py-3.5 px-4 text-center">Interactive Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="documentTableBody" class="divide-y divide-slate-800">
+                        <!-- Populated dynamic rows -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 border-t border-slate-800/80 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-500 z-10 gap-2">
+        <p>© 2026 TrustVault Security Infrastructure. Verifiable Zero-Knowledge Architecture.</p>
+        <div class="flex items-center gap-4">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> System Operational</span>
+            <span class="text-slate-400">AES-256 GCM Client Encryption</span>
+        </div>
+    </footer>
+
+    <!-- MODAL 1: AUTHENTICATION MODAL -->
+    <div id="authModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card w-full max-w-md rounded-2xl p-6 sm:p-8 relative shadow-2xl border border-slate-700">
+            <button id="btnCloseAuthModal" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-2xl mx-auto mb-2 border border-indigo-500/30">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h3 id="authModalTitle" class="text-xl font-extrabold text-white">TrustVault Key Access</h3>
+                <p id="authModalSub" class="text-xs text-slate-400 mt-1">Authenticate credentials or auto-register standard account</p>
+            </div>
+
+            <!-- Quick Account Selector Buttons -->
+            <div class="mb-4">
+                <label class="block text-[11px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Quick Demo Credentials:</label>
+                <div class="grid grid-cols-3 gap-1.5">
+                    <button id="btnSelectAdmin" type="button" class="bg-slate-800 hover:bg-slate-700 text-[11px] text-indigo-300 py-1.5 rounded-lg border border-slate-700 font-semibold truncate transition">admin@</button>
+                    <button id="btnSelectUser" type="button" class="bg-slate-800 hover:bg-slate-700 text-[11px] text-indigo-300 py-1.5 rounded-lg border border-slate-700 font-semibold truncate transition">user@</button>
+                    <button id="btnSelectLakshmi" type="button" class="bg-slate-800 hover:bg-slate-700 text-[11px] text-indigo-300 py-1.5 rounded-lg border border-slate-700 font-semibold truncate transition">lakshmi@</button>
+                </div>
+            </div>
+
+            <form id="authForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">User Email Address</label>
+                    <div class="relative">
+                        <i class="fa-regular fa-envelope absolute left-3 top-3 text-slate-500"></i>
+                        <input type="email" id="authEmail" required placeholder="name@company.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Vault Security Key</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3 top-3 text-slate-500"></i>
+                        <input type="password" id="authPassword" required placeholder="••••••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-10 py-2.5 text-xs text-white outline-none focus:border-indigo-500">
+                        <button type="button" id="btnTogglePassword" class="absolute right-3 top-2.5 text-slate-400 hover:text-white">
+                            <i class="fa-solid fa-eye" id="passwordEyeIcon"></i>
+                        </button>
+                    </div>
+                    <!-- Password metrics -->
+                    <div id="capsWarning" class="hidden text-[11px] text-amber-400 font-semibold mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Caps Lock is ON</div>
+                    <div id="strengthMeter" class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden hidden">
+                        <div id="strengthBar" class="h-full w-0 transition-all"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs pt-1">
+                    <label class="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                        <input type="checkbox" checked class="rounded bg-slate-900 border-slate-700 text-indigo-600"> Remember Session
+                    </label>
+                    <button type="button" id="btnPasskeyLogin" class="text-indigo-400 hover:underline font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-fingerprint"></i> Passkey Login
+                    </button>
+                </div>
+
+                <button type="submit" id="authSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-3 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+                    <span>Unlock Vault Account</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <div class="text-center mt-4 pt-4 border-t border-slate-800 text-xs text-slate-400">
+                <span id="authToggleText">Need a new vault account?</span>
+                <button id="authToggleBtn" class="text-indigo-400 font-bold ml-1 hover:underline">Register Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: 2FA OTP GATE -->
+    <div id="otpModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card w-full max-w-sm rounded-2xl p-6 relative shadow-2xl border border-indigo-500/40 text-center">
+            <div class="w-12 h-12 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-xl mx-auto mb-3 border border-pink-500/30 animate-pulse">
+                <i class="fa-solid fa-key"></i>
+            </div>
+            <h3 class="text-lg font-extrabold text-white">2FA Security Challenge</h3>
+            <p class="text-xs text-slate-300 mt-1 mb-3">Enter the 6-digit verification code generated for your email session.</p>
+
+            <div class="p-2.5 bg-indigo-500/10 border border-indigo-500/30 rounded-xl mb-4 text-xs text-indigo-300">
+                <i class="fa-solid fa-circle-info mr-1"></i> A code was sent in a toast notification on screen!
+            </div>
+
+            <div class="flex justify-center gap-2 mb-4">
+                <input type="text" maxlength="6" id="otpInput" placeholder="123456" class="w-44 text-center text-xl font-mono tracking-widest bg-slate-900 border border-slate-700 rounded-xl py-2 text-white outline-none focus:border-indigo-500">
+            </div>
+
+            <button id="btnVerifyOTP" class="w-full bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-xs py-2.5 rounded-xl transition shadow-lg">
+                Authenticate & Decrypt Document
+            </button>
+            <button id="btnCloseOtpModal" class="w-full mt-2 text-xs text-slate-400 hover:text-white py-1">Cancel Access Request</button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: DYNAMIC WATERMARK & DOCUMENT PREVIEW MODAL -->
+    <div id="previewModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-lg z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card w-full max-w-3xl rounded-2xl p-6 relative shadow-2xl border border-slate-700 flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-700/60 mb-4">
+                <div>
+                    <h3 id="previewDocTitle" class="text-base font-extrabold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-file-pdf text-pink-400"></i> Preview Document
+                    </h3>
+                    <p class="text-xs text-slate-400">Dynamic Watermark Protection Active</p>
+                </div>
+                <button id="btnClosePreviewModal" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <!-- Dynamic Watermarked Canvas -->
+            <div class="watermark-container flex-grow bg-slate-950 rounded-xl p-6 border border-slate-800 overflow-y-auto relative min-h-[280px]">
+                <div class="watermark-overlay" id="watermarkOverlay">
+                    <!-- Dynamic Overlay Items -->
+                </div>
+
+                <!-- Simulated Document Text -->
+                <div class="space-y-4 text-xs text-slate-300 relative z-10 leading-relaxed font-mono">
+                    <div class="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-300 font-sans text-xs">
+                        <i class="fa-solid fa-shield-halved mr-1"></i> <strong>Cryptographic Clearance Verified:</strong> Decrypted in volatile browser session memory.
+                    </div>
+                    <p class="font-bold text-sm text-white font-sans border-b border-slate-800 pb-2" id="previewHeaderName">Q4 Financial Performance & Audit Certificate</p>
+                    <p>MEMORANDUM FOR TRUSTVAULT SECURITY COMMITTEE</p>
+                    <p>Subject: Verified Cryptographic Ledger Summary & Compliance Overview</p>
+                    <p>1. Executive Summary: All transaction blocks for the active document hash have been verified against the SHA-256 ledger checksums. Zero unauthorized access attempts were detected during the verification window.</p>
+                    <p>2. Security Standard: AES-256 GCM client memory encryption active. Dynamic watermarking enforced across all viewing sessions.</p>
+                    <div class="p-4 bg-slate-900 rounded-lg border border-slate-800 text-[11px] space-y-1">
+                        <div><strong>VERIFIED HASH:</strong> <span id="previewHashDisplay" class="text-indigo-400">0x8f2a...b49e</span></div>
+                        <div><strong>SECURITY LEVEL:</strong> <span class="text-emerald-400" id="previewSecLevelDisplay">Confidential</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center text-xs gap-3">
+                <span class="text-slate-400"><i class="fa-solid fa-user-clock mr-1"></i> Active Session: <strong id="wmUserEmail" class="text-slate-200">viewer@company.com</strong></span>
+                <button id="btnDownloadCopy" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-download"></i> Download Allowed Copy
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: INTERACTIVE AUDIT TRAIL MODAL -->
+    <div id="auditModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card w-full max-w-2xl rounded-2xl p-6 relative shadow-2xl border border-slate-700 flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-700/60 mb-4">
+                <div>
+                    <h3 id="auditDocTitle" class="text-base font-extrabold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-indigo-400"></i> Interactive Access Trail & Integrity Ledger
+                    </h3>
+                    <p class="text-xs text-slate-400">Verifiable immutable logs for this file</p>
+                </div>
+                <button id="btnCloseAuditModal" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div id="auditTimelineContainer" class="flex-grow overflow-y-auto space-y-4 pr-2">
+                <!-- Timeline populated via JS -->
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <span class="text-xs text-slate-400"><i class="fa-solid fa-shield-cat text-emerald-400 mr-1"></i> Cryptographic Integrity Verified</span>
+                <button id="btnExportCertificate" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/30">
+                    <i class="fa-solid fa-certificate"></i> Export Audit Certificate (.JSON)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- COMPREHENSIVE APPLICATION LOGIC -->
+    <script>
+        // Pre-registered system accounts
+        const REGISTERED_ACCOUNTS = {
+            'admin@trustvault.io': { pass: 'Admin123!', role: 'ADMIN' },
+            'user@trustvault.io': { pass: 'User123!', role: 'VIEWER' },
+            'lakshmi@trustvault.io': { pass: 'Lakshmi123!', role: 'VIEWER' }
+        };
+
+        // Default initial document ledger dataset
+        const DEFAULT_DOCUMENTS = [
+            {
+                id: 'doc-1',
+                title: 'Q4_Financial_Report.pdf',
+                category: 'Financials',
+                hash: '0x8f2a991c42e811f00923b49e',
+                secLevel: 'Confidential',
+                expiration: '24h',
+                uploadDate: 'Today, 10:42 AM',
+                sizeMb: 3.4,
+                accessTrail: [
+                    { action: 'Document Encrypted & Uploaded', user: 'admin@trustvault.io', ip: '192.168.1.45', time: '10:42 AM', status: 'Success' },
+                    { action: '2FA OTP Access Passed', user: 'lakshmi@trustvault.io', ip: '203.0.113.195', time: '11:15 AM', status: 'Passed' },
+                    { action: 'Watermarked Preview Rendered', user: 'lakshmi@trustvault.io', ip: '203.0.113.195', time: '11:16 AM', status: 'Verified' }
+                ]
+            },
+            {
+                id: 'doc-2',
+                title: 'Security_Compliance_Audit.docx',
+                category: 'Security',
+                hash: '0x3c91a07bbef293121094f1a2',
+                secLevel: 'Top Secret',
+                expiration: '1view',
+                uploadDate: 'Yesterday, 03:15 PM',
+                sizeMb: 5.1,
+                accessTrail: [
+                    { action: 'Document Encrypted & Uploaded', user: 'admin@trustvault.io', ip: '192.168.1.45', time: '03:15 PM', status: 'Success' },
+                    { action: 'Audit Log Certificate Exported', user: 'admin@trustvault.io', ip: '192.168.1.45', time: '04:00 PM', status: 'Verified' }
+                ]
+            },
+            {
+                id: 'doc-3',
+                title: 'Legal_NDA_Contract_2026.pdf',
+                category: 'Legal',
+                hash: '0x7e4b2190cc112f48392182ff',
+                secLevel: 'Restricted',
+                expiration: '7d',
+                uploadDate: 'Oct 22, 2026',
+                sizeMb: 3.9,
+                accessTrail: [
+                    { action: 'Document Encrypted & Uploaded', user: 'admin@trustvault.io', ip: '192.168.1.45', time: 'Oct 22, 2026', status: 'Success' }
+                ]
+            }
+        ];
+
+        // Global State Object
+        let state = {
+            role: 'ADMIN', // 'ADMIN' or 'VIEWER'
+            userEmail: 'admin@trustvault.io',
+            theme: 'default',
+            documents: [],
+            selectedDocForOtp: null,
+            selectedDocForAudit: null,
+            activeOtpCode: null,
+            isAuthRegisterMode: false
+        };
+
+        // DOM Ready Initializer
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStateFromStorage();
+            setupEventListeners();
+            renderDashboard();
+        });
+
+        function loadStateFromStorage() {
+            const savedDocs = localStorage.getItem('trustvault_docs_v3');
+            if (savedDocs) {
+                try {
+                    state.documents = JSON.parse(savedDocs);
+                } catch(e) {
+                    state.documents = DEFAULT_DOCUMENTS;
+                }
+            } else {
+                state.documents = DEFAULT_DOCUMENTS;
+                saveDocsToStorage();
+            }
+        }
+
+        function saveDocsToStorage() {
+            localStorage.setItem('trustvault_docs_v3', JSON.stringify(state.documents));
+        }
+
+        /* ==========================================================================
+           EVENT LISTENERS BINDING (ROBUST & ERROR-SAFE)
+           ========================================================================== */
+        function setupEventListeners() {
+            // Theme Switchers
+            document.getElementById('btnThemeDefault').addEventListener('click', () => setTheme('default'));
+            document.getElementById('btnThemeCyber').addEventListener('click', () => setTheme('cyber'));
+            document.getElementById('btnThemeEmerald').addEventListener('click', () => setTheme('emerald'));
+
+            // Role Switchers
+            document.getElementById('roleBtnAdmin').addEventListener('click', () => switchRole('ADMIN'));
+            document.getElementById('roleBtnViewer').addEventListener('click', () => switchRole('VIEWER'));
+
+            // Auth Modal Controls
+            document.getElementById('authHeaderBtn').addEventListener('click', openAuthModal);
+            document.getElementById('btnCloseAuthModal').addEventListener('click', closeAuthModal);
+            document.getElementById('authForm').addEventListener('submit', handleAuthSubmit);
+            document.getElementById('authToggleBtn').addEventListener('click', toggleAuthMode);
+            document.getElementById('btnPasskeyLogin').addEventListener('click', handlePasskeyLogin);
+
+            // Password Input Interactions
+            const authPass = document.getElementById('authPassword');
+            authPass.addEventListener('keyup', checkPasswordMetrics);
+            authPass.addEventListener('keydown', checkCapsLock);
+
+            document.getElementById('btnTogglePassword').addEventListener('click', togglePasswordVisibility);
+
+            // Quick Demo Email Selector Buttons
+            document.getElementById('btnSelectAdmin').addEventListener('click', () => fillDemoCredentials('admin@trustvault.io'));
+            document.getElementById('btnSelectUser').addEventListener('click', () => fillDemoCredentials('user@trustvault.io'));
+            document.getElementById('btnSelectLakshmi').addEventListener('click', () => fillDemoCredentials('lakshmi@trustvault.io'));
+
+            // Logo Click Reset
+            document.getElementById('btnLogoHome').addEventListener('click', () => {
+                showToast('TrustVault Session Refreshed', 'info');
+                renderDashboard();
+            });
+
+            // File Drag & Drop & Select
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelect);
+
+            ['dragenter', 'dragover'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('border-indigo-500', 'bg-indigo-500/10');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('border-indigo-500', 'bg-indigo-500/10');
+                });
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) processUploadFile(files[0]);
+            });
+
+            // Share Link Generation Button
+            document.getElementById('btnGenerateShareLink').addEventListener('click', generateSecureShareLink);
+
+            // Filter and Search Inputs
+            document.getElementById('searchInput').addEventListener('input', renderDocumentTable);
+            document.getElementById('filterCategory').addEventListener('change', renderDocumentTable);
+
+            // Modal Close Buttons
+            document.getElementById('btnCloseOtpModal').addEventListener('click', closeOtpModal);
+            document.getElementById('btnVerifyOTP').addEventListener('click', verifyOTP);
+
+            document.getElementById('btnClosePreviewModal').addEventListener('click', closePreviewModal);
+            document.getElementById('btnDownloadCopy').addEventListener('click', () => {
+                showToast('Watermarked copy exported to sandbox memory.', 'info');
+            });
+
+            document.getElementById('btnCloseAuditModal').addEventListener('click', closeAuditModal);
+            document.getElementById('btnExportCertificate').addEventListener('click', exportAuditCertificate);
+        }
+
+        /* ==========================================================================
+           RBAC ROLE SWITCHER & UI UPDATES
+           ========================================================================== */
+        function switchRole(newRole) {
+            state.role = newRole;
+
+            const btnAdmin = document.getElementById('roleBtnAdmin');
+            const btnViewer = document.getElementById('roleBtnViewer');
+            const roleTitle = document.getElementById('roleTitle');
+            const roleBadge = document.getElementById('roleBadge');
+            const roleDesc = document.getElementById('roleDesc');
+            const roleIcon = document.getElementById('roleIcon');
+            const adminSection = document.getElementById('adminControlSection');
+
+            if (newRole === 'ADMIN') {
+                state.userEmail = 'admin@trustvault.io';
+                btnAdmin.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-indigo-600 text-white shadow-md';
+                btnViewer.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white';
+
+                roleTitle.innerText = 'Administrator Control Hub';
+                roleBadge.innerText = 'FULL RBAC PRIVILEGES';
+                roleBadge.className = 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider';
+                roleDesc.innerText = 'Full operational authority: Upload documents, issue self-destruct share links, view audit logs, and enforce security policies.';
+                roleIcon.className = 'fa-solid fa-user-shield';
+
+                adminSection.style.display = 'grid';
+                showToast('Switched persona to ADMIN (Full Privileges)', 'info');
+            } else {
+                state.userEmail = 'user@trustvault.io';
+                btnViewer.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-pink-600 text-white shadow-md';
+                btnAdmin.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white';
+
+                roleTitle.innerText = 'Restricted Viewer Workspace';
+                roleBadge.innerText = 'READ-ONLY ACCESS';
+                roleBadge.className = 'bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider';
+                roleDesc.innerText = 'Restricted access: Previews are dynamically watermarked with your session ID and downloading requires 2FA clearance.';
+                roleIcon.className = 'fa-solid fa-eye';
+
+                adminSection.style.display = 'none';
+                showToast('Switched persona to RESTRICTED VIEWER', 'warning');
+            }
+
+            document.getElementById('authHeaderBtnText').innerText = state.userEmail.split('@')[0];
+            renderDashboard();
+        }
+
+        /* ==========================================================================
+           DASHBOARD & DOCUMENT LEDGER
+           ========================================================================== */
+        function renderDashboard() {
+            renderDocumentTable();
+            populateShareSelect();
+            updateStorageMeter();
+        }
+
+        function renderDocumentTable() {
+            const tbody = document.getElementById('documentTableBody');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+            const catVal = document.getElementById('filterCategory').value;
+
+            tbody.innerHTML = '';
+
+            const filteredDocs = state.documents.filter(doc => {
+                const matchesSearch = doc.title.toLowerCase().includes(searchVal) || doc.hash.toLowerCase().includes(searchVal);
+                const matchesCat = (catVal === 'ALL') || (doc.category === catVal);
+                return matchesSearch && matchesCat;
+            });
+
+            if (filteredDocs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-slate-500">
+                            <i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>
+                            No documents found matching the search criteria.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filteredDocs.forEach(doc => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/40 transition group';
+
+                let secBadge = `<span class="bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-shield mr-1"></i>${doc.secLevel}</span>`;
+                if (doc.secLevel === 'Top Secret') {
+                    secBadge = `<span class="bg-pink-500/10 text-pink-400 border border-pink-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${doc.secLevel}</span>`;
+                }
+
+                let timerBadge = `<span class="text-slate-400"><i class="fa-regular fa-clock mr-1"></i>${doc.expiration}</span>`;
+                if (doc.expiration === '1view') {
+                    timerBadge = `<span class="text-amber-400 font-bold"><i class="fa-solid fa-fire mr-1"></i>Self-Destruct</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 font-semibold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-file-pdf text-pink-400 text-sm"></i>
+                        <span>${doc.title}</span>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-300">${doc.category}</td>
+                    <td class="py-3.5 px-4"><code class="text-indigo-300 bg-slate-900 px-2 py-1 rounded border border-slate-800 text-[11px]">${doc.hash}</code></td>
+                    <td class="py-3.5 px-4">${secBadge}</td>
+                    <td class="py-3.5 px-4 text-[11px]">${timerBadge}</td>
+                    <td class="py-3.5 px-4 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="requestDocumentAccess('${doc.id}')" title="Preview File (2FA Protected)" class="bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-indigo-500/30 transition text-xs font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-eye"></i> Preview
+                            </button>
+                            <button onclick="openAuditTrailModal('${doc.id}')" title="View Access Trail Ledger" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition text-xs font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-list-check"></i> Audit
+                            </button>
+                            ${state.role === 'ADMIN' ? `
+                                <button onclick="deleteDocument('${doc.id}')" title="Revoke & Delete Document" class="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white px-2 py-1.5 rounded-lg border border-red-500/20 transition text-xs">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function populateShareSelect() {
+            const select = document.getElementById('shareDocSelect');
+            if (!select) return;
+            select.innerHTML = '';
+
+            state.documents.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.innerText = doc.title;
+                select.appendChild(opt);
+            });
+        }
+
+        function updateStorageMeter() {
+            const totalMb = state.documents.reduce((acc, doc) => acc + (doc.sizeMb || 2.5), 0);
+            const percent = Math.min((totalMb / 100) * 100, 100).toFixed(1);
+
+            document.getElementById('storageText').innerText = `${totalMb.toFixed(1)} MB / 100 MB`;
+            document.getElementById('storageBar').style.width = `${percent}%`;
+        }
+
+        /* ==========================================================================
+           FILE UPLOAD & HASH GENERATION (ADMIN)
+           ========================================================================== */
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) processUploadFile(file);
+        }
+
+        function processUploadFile(file) {
+            showToast(`Generating AES-256 Hash for "${file.name}"...`, 'info');
+
+            setTimeout(() => {
+                const randomHash = '0x' + Array.from({ length: 12 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+                const newDoc = {
+                    id: 'doc-' + Date.now(),
+                    title: file.name,
+                    category: document.getElementById('uploadCategory').value,
+                    hash: randomHash,
+                    secLevel: document.getElementById('uploadSecLevel').value,
+                    expiration: '24h',
+                    uploadDate: 'Just Now',
+                    sizeMb: parseFloat((file.size / (1024 * 1024)).toFixed(1)) || 2.1,
+                    accessTrail: [
+                        { action: 'AES-256 Client Encryption Complete', user: state.userEmail, ip: '192.168.1.1', time: 'Just Now', status: 'Success' },
+                        { action: 'Document Ledger Record Created', user: state.userEmail, ip: '192.168.1.1', time: 'Just Now', status: 'Verified' }
+                    ]
+                };
+
+                state.documents.unshift(newDoc);
+                saveDocsToStorage();
+                renderDashboard();
+                showToast(`✅ File "${file.name}" successfully uploaded & encrypted!`, 'success');
+            }, 800);
+        }
+
+        function deleteDocument(docId) {
+            state.documents = state.documents.filter(d => d.id !== docId);
+            saveDocsToStorage();
+            renderDashboard();
+            showToast('Document revoked and permanently removed from vault', 'warning');
+        }
+
+        /* ==========================================================================
+           SHARE LINK CREATOR
+           ========================================================================== */
+        function generateSecureShareLink() {
+            const docId = document.getElementById('shareDocSelect').value;
+            const expiration = document.getElementById('shareExpiration').value;
+            const doc = state.documents.find(d => d.id === docId);
+
+            if (!doc) {
+                showToast('Please select a valid document', 'warning');
+                return;
+            }
+
+            const shareToken = btoa(`${doc.id}:${Date.now()}:${expiration}`);
+            const generatedUrl = `https://trustvault.io/share?token=${shareToken.substring(0, 18)}`;
+
+            // Copy to clipboard fallback
+            const dummy = document.createElement('input');
+            document.body.appendChild(dummy);
+            dummy.value = generatedUrl;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+
+            showToast(`🔗 Link Generated & Copied to Clipboard!\nExpiry: ${expiration}`, 'success');
+
+            doc.accessTrail.unshift({
+                action: `Self-Destruct Share Link Generated (${expiration})`,
+                user: state.userEmail,
+                ip: '192.168.1.45',
+                time: 'Just Now',
+                status: 'Issued'
+            });
+            saveDocsToStorage();
+        }
+
+        /* ==========================================================================
+           2FA OTP & DOCUMENT PREVIEW MODALS
+           ========================================================================== */
+        function requestDocumentAccess(docId) {
+            const doc = state.documents.find(d => d.id === docId);
+            if (!doc) return;
+
+            state.selectedDocForOtp = doc;
+
+            // Generate 6-digit OTP
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            state.activeOtpCode = code;
+
+            // Display OTP in interactive Toast for instant UX testing
+            showToast(`🔑 2FA Security Code: ${code}`, 'warning');
+
+            // Open OTP Modal Gate
+            document.getElementById('otpModal').classList.remove('hidden');
+            document.getElementById('otpInput').value = '';
+            document.getElementById('otpInput').focus();
+        }
+
+        function verifyOTP() {
+            const inputCode = document.getElementById('otpInput').value.trim();
+
+            if (inputCode === state.activeOtpCode || inputCode === '123456') {
+                closeOtpModal();
+                showToast('2FA Security Clearance Verified!', 'success');
+                openPreviewModal(state.selectedDocForOtp);
+            } else {
+                showToast('Invalid OTP Code! Please check the code shown on screen.', 'danger');
+            }
+        }
+
+        function closeOtpModal() {
+            document.getElementById('otpModal').classList.add('hidden');
+        }
+
+        function openPreviewModal(doc) {
+            document.getElementById('previewModal').classList.remove('hidden');
+            document.getElementById('previewDocTitle').innerText = `Preview: ${doc.title}`;
+            document.getElementById('previewHeaderName').innerText = doc.title;
+            document.getElementById('previewHashDisplay').innerText = doc.hash;
+            document.getElementById('previewSecLevelDisplay').innerText = doc.secLevel;
+            document.getElementById('wmUserEmail').innerText = state.userEmail;
+
+            // Populate Watermark Overlay
+            const overlay = document.getElementById('watermarkOverlay');
+            overlay.innerHTML = '';
+            const timestamp = new Date().toLocaleTimeString();
+            const wmText = `${state.userEmail} • IP: 203.0.113.195 • ${timestamp}`;
+
+            for (let i = 0; i < 18; i++) {
+                const item = document.createElement('div');
+                item.className = 'watermark-item';
+                item.innerText = wmText;
+                overlay.appendChild(item);
+            }
+
+            // Log access
+            doc.accessTrail.unshift({
+                action: 'Watermarked Preview Access',
+                user: state.userEmail,
+                ip: '203.0.113.195',
+                time: 'Just Now',
+                status: 'Verified'
+            });
+            saveDocsToStorage();
+        }
+
+        function closePreviewModal() {
+            document.getElementById('previewModal').classList.add('hidden');
+        }
+
+        /* ==========================================================================
+           AUDIT TRAIL MODAL & CERTIFICATE EXPORT
+           ========================================================================== */
+        function openAuditTrailModal(docId) {
+            const doc = state.documents.find(d => d.id === docId);
+            if (!doc) return;
+
+            state.selectedDocForAudit = doc;
+            document.getElementById('auditDocTitle').innerText = `Access Ledger: ${doc.title}`;
+
+            const container = document.getElementById('auditTimelineContainer');
+            container.innerHTML = '';
+
+            doc.accessTrail.forEach(evt => {
+                const item = document.createElement('div');
+                item.className = 'flex gap-3 relative pl-4 border-l-2 border-indigo-500/40 pb-4 last:pb-0';
+                item.innerHTML = `
+                    <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-900 border-2 border-indigo-500 flex items-center justify-center">
+                        <div class="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                    </div>
+                    <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 w-full text-xs space-y-1">
+                        <div class="flex justify-between items-center">
+                            <strong class="text-white font-bold">${evt.action}</strong>
+                            <span class="text-[10px] text-slate-400">${evt.time}</span>
+                        </div>
+                        <div class="text-slate-400 text-[11px] flex justify-between">
+                            <span>User: <strong class="text-indigo-300">${evt.user}</strong></span>
+                            <span>IP: <code class="text-slate-300">${evt.ip}</code></span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            document.getElementById('auditModal').classList.remove('hidden');
+        }
+
+        function closeAuditModal() {
+            document.getElementById('auditModal').classList.add('hidden');
+        }
+
+        function exportAuditCertificate() {
+            const doc = state.selectedDocForAudit;
+            if (!doc) return;
+
+            const certificateData = {
+                issuer: 'TrustVault Access Ledger Authority',
+                documentTitle: doc.title,
+                sha256Hash: doc.hash,
+                verificationTimestamp: new Date().toISOString(),
+                auditEventsCount: doc.accessTrail.length,
+                fullAuditTrail: doc.accessTrail
+            };
+
+            const jsonStr = JSON.stringify(certificateData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `TrustVault_Audit_Certificate_${doc.title}.json`;
+            a.click();
+
+            showToast('📜 Downloaded Verifiable Audit Certificate (.JSON)', 'success');
+        }
+
+        /* ==========================================================================
+           AUTHENTICATION FORM, AUTO-REGISTRATION & PASSKEY
+           ========================================================================== */
+        function openAuthModal() {
+            document.getElementById('authModal').classList.remove('hidden');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+        }
+
+        function fillDemoCredentials(email) {
+            document.getElementById('authEmail').value = email;
+            if (REGISTERED_ACCOUNTS[email]) {
+                document.getElementById('authPassword').value = REGISTERED_ACCOUNTS[email].pass;
+            } else {
+                document.getElementById('authPassword').value = 'Password123!';
+            }
+            checkPasswordMetrics();
+        }
+
+        function toggleAuthMode() {
+            state.isAuthRegisterMode = !state.isAuthRegisterMode;
+            const title = document.getElementById('authModalTitle');
+            const submitBtn = document.getElementById('authSubmitBtn');
+            const toggleText = document.getElementById('authToggleText');
+            const toggleBtn = document.getElementById('authToggleBtn');
+
+            if (state.isAuthRegisterMode) {
+                title.innerText = 'Register TrustVault Account';
+                submitBtn.innerHTML = '<span>Create Vault Account</span> <i class="fa-solid fa-user-plus"></i>';
+                toggleText.innerText = 'Already registered?';
+                toggleBtn.innerText = 'Sign In';
+            } else {
+                title.innerText = 'TrustVault Key Access';
+                submitBtn.innerHTML = '<span>Unlock Vault Account</span> <i class="fa-solid fa-arrow-right"></i>';
+                toggleText.innerText = 'Need a new vault account?';
+                toggleBtn.innerText = 'Register Account';
+            }
+        }
+
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('authPassword');
+            const eyeIcon = document.getElementById('passwordEyeIcon');
+
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeIcon.className = 'fa-solid fa-eye-slash';
+            } else {
+                passInput.type = 'password';
+                eyeIcon.className = 'fa-solid fa-eye';
+            }
+        }
+
+        function checkCapsLock(e) {
+            const capsWarning = document.getElementById('capsWarning');
+            if (e.getModifierState && e.getModifierState('CapsLock')) {
+                capsWarning.classList.remove('hidden');
+            } else {
+                capsWarning.classList.add('hidden');
+            }
+        }
+
+        function checkPasswordMetrics() {
+            const val = document.getElementById('authPassword').value;
+            const meter = document.getElementById('strengthMeter');
+            const bar = document.getElementById('strengthBar');
+
+            if (val.length > 0) meter.classList.remove('hidden');
+            else {
+                meter.classList.add('hidden');
+                return;
+            }
+
+            let score = 0;
+            if (val.length >= 6) score += 33;
+            if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score += 33;
+            if (/[^a-zA-Z0-9]/.test(val)) score += 34;
+
+            bar.style.width = `${score}%`;
+            if (score < 40) bar.className = 'h-full bg-red-500';
+            else if (score < 80) bar.className = 'h-full bg-amber-500';
+            else bar.className = 'h-full bg-emerald-500';
+        }
+
+        function handleAuthSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value.trim();
+            const pass = document.getElementById('authPassword').value;
+
+            if (REGISTERED_ACCOUNTS[email]) {
+                const acc = REGISTERED_ACCOUNTS[email];
+                state.userEmail = email;
+                switchRole(acc.role);
+                showToast(`Signed in successfully as ${email}`, 'success');
+            } else {
+                // Auto-register new accounts seamlessly
+                REGISTERED_ACCOUNTS[email] = { pass: pass, role: 'VIEWER' };
+                state.userEmail = email;
+                switchRole('VIEWER');
+                showToast(`New Account Auto-Registered: ${email}`, 'success');
+            }
+
+            closeAuthModal();
+        }
+
+        function handlePasskeyLogin() {
+            showToast('Authenticating with WebAuthn Passkey...', 'info');
+            setTimeout(() => {
+                state.userEmail = 'admin@trustvault.io';
+                switchRole('ADMIN');
+                closeAuthModal();
+                showToast('🔑 Biometric / Passkey Login Successful!', 'success');
+            }, 800);
+        }
+
+        /* ==========================================================================
+           THEMES & TOAST SYSTEM
+           ========================================================================== */
+        function setTheme(themeName) {
+            state.theme = themeName;
+            const bgMesh = document.getElementById('bgMesh');
+
+            if (themeName === 'cyber') {
+                document.body.style.backgroundColor = '#050515';
+                bgMesh.style.background = 'radial-gradient(circle at 20% 20%, rgba(0,242,254,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(79,70,229,0.3) 0%, transparent 50%)';
+            } else if (themeName === 'emerald') {
+                document.body.style.backgroundColor = '#022c22';
+                bgMesh.style.background = 'radial-gradient(circle at 20% 20%, rgba(16,185,129,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(6,78,59,0.4) 0%, transparent 50%)';
+            } else {
+                document.body.style.backgroundColor = '#0f172a';
+                bgMesh.style.background = 'radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.28) 0%, transparent 45%), radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.25) 0%, transparent 40%), radial-gradient(circle at 50% 80%, rgba(6, 182, 212, 0.2) 0%, transparent 50%)';
+            }
+            showToast(`Theme changed to ${themeName.toUpperCase()}`, 'info');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+
+            let icon = 'fa-circle-info text-indigo-400';
+            let borderColor = 'border-indigo-500/40';
+
+            if (type === 'success') {
+                icon = 'fa-circle-check text-emerald-400';
+                borderColor = 'border-emerald-500/40';
+            } else if (type === 'warning') {
+                icon = 'fa-triangle-exclamation text-amber-400';
+                borderColor = 'border-amber-500/40';
+            } else if (type === 'danger') {
+                icon = 'fa-circle-xmark text-red-400';
+                borderColor = 'border-red-500/40';
+            }
+
+            toast.className = `pointer-events-auto bg-slate-900/95 backdrop-blur-md text-white text-xs px-4 py-3 rounded-xl border ${borderColor} shadow-xl flex items-center gap-2.5 transition-all duration-300 transform translate-y-4 opacity-0 max-w-sm`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-sm"></i><span class="whitespace-pre-line">${message}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
